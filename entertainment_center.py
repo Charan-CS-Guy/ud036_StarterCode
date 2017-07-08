@@ -61,6 +61,10 @@ def get_top_movies(api_key):
 config = ConfigObj("config.ini")
 key = config['api_key']
 
+if len(key) <= 0:
+
+    print("Please, place your api key in the config.ini file")
+    exit
 #collecting the data for top movies
 list_of_top_movies = get_top_movies(key)
 
