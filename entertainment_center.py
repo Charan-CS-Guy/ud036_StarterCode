@@ -1,19 +1,68 @@
 ''' This module creates data for different movies using media module's Movie class'''
 import media
 import fresh_tomatoes
-toy_story = media.Movie("Toy Story", "Toy Story is about the 'secret life of toys' when people are not around.", "https://www.youtube.com/watch?v=KYz2wyBy3kc", "https://upload.wikimedia.org/wikipedia/en/thumb/1/13/Toy_Story.jpg/220px-Toy_Story.jpg")
+import requests
+import simplejson
 
-iron_man = media.Movie("Iron Man", "Iron Man is a 2008 American superhero film based on the Marvel Comics character of the same", "https://www.youtube.com/watch?v=8hYlB38asDY", "https://www.flickeringmyth.com/wp-content/uploads/2017/03/Iron-Man-2008-Movie-Poster.jpg")
+from configobj import ConfigObj
 
-the_imitation_game = media.Movie("The Imitation Game", "Film is loosely based on the biography of Alan Turing", "https://www.youtube.com/watch?v=S5CjKEFb-sM", "https://upload.wikimedia.org/wikipedia/en/5/5e/The_Imitation_Game_poster.jpg")
+def get_trailer_key(movie_id, base_link, interface_key):
+    '''used to fetch the key for youtube trailer link of the movie id given'''
+    url = base_link + str(movie_id) + "/videos?api_key=" + interface_key
 
-pursuit_of_happyness = media.Movie("The Pursuit of Happyness", "The film is a drama of entrepreneur Chris Gardner's nearly one-year struggle being homeless", "https://www.youtube.com/watch?v=bTJ-0zVAsEA", "https://upload.wikimedia.org/wikipedia/en/thumb/8/81/Poster-pursuithappyness.jpg/220px-Poster-pursuithappyness.jpg")
+    res = requests.get(url)
 
-dark_knight = media.Movie("The Dark Knight", " Bruce Wayne/Batman (Bale), James Gordon (Oldman) and Harvey Dent (Eckhart) form an alliance to dismantle organized crime in Gotham City", "https://www.youtube.com/watch?v=EXeTwQWrcwY", "https://upload.wikimedia.org/wikipedia/en/8/8a/Dark_Knight.jpg")
+    data_res = res.content
 
-artificial_intelligence = media.Movie("Artificial Intelligence", " The film is based on a screen story by Ian Watson and the 1969 short story 'Super-Toys Last All Summer Long' by Brian Aldiss.", "https://www.youtube.com/watch?v=_19pRsZRiz4", "https://upload.wikimedia.org/wikipedia/en/thumb/e/e6/AI_Poster.jpg/220px-AI_Poster.jpg")
+    js_res = simplejson.loads(data_res)
 
-#create a list of all the movies/objects to provide as an input to open_movies function
-movies = [toy_story, iron_man, the_imitation_game, pursuit_of_happyness, dark_knight, artificial_intelligence]
+    return js_res["results"][0]["key"]
 
-fresh_tomatoes.open_movies_page(movies)
+def get_top_movies(api_key):
+    '''fetches the top movies from TMDB database and returns
+    them as a list of objects or type Movie() from media module'''
+
+    discover_link = "https://api.themoviedb.org/3/discover/movie?"
+    poster_base_url = "http://image.tmdb.org/t/p/w185//"
+    youtube_base_url = "https://www.youtube.com/watch?v="
+    base_link = "https://api.themoviedb.org/3/movie/"
+    payload = {'api_key' : api_key, 'language' : 'en-US',
+               'sort_by' : 'popularity.desc', 'page' : '1'}
+
+    r = requests.get(discover_link, params=payload)
+
+    data = r.content
+
+    js = simplejson.loads(data)
+
+    #list to hold all the movie objects
+    movies_list = []
+    
+    #create a list of all the movies/objects to provide as an input to open_movies function
+    for movie in js['results']:
+
+        id = movie['id']
+        title = movie['title']
+        story_line = movie['overview'].encode('ascii', 'ignore').decode('ascii')
+        poster_path = movie['poster_path']
+
+        poster_link = poster_base_url + poster_path
+
+        trailer_key = get_trailer_key(id, base_link, api_key)
+        trailer_link = youtube_base_url + trailer_key
+
+        #creating objects to store each movie details using Movie class from media module.
+        obj = media.Movie(title, story_line, trailer_link, poster_link)
+        movies_list.append(obj)
+    
+    return movies_list
+
+#fetching the api key from config file using ConfigObj class from configobj module
+config = ConfigObj("config.ini")
+key = config['api_key']
+
+#collecting the data for top movies
+list_of_top_movies = get_top_movies(key)
+
+#call open movies function from fresh_tomatoes module to create website
+fresh_tomatoes.open_movies_page(list_of_top_movies)
