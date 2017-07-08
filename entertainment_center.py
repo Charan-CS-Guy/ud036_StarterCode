@@ -3,6 +3,7 @@ import media
 import fresh_tomatoes
 import requests
 import simplejson
+import sys
 
 from configobj import ConfigObj
 
@@ -63,8 +64,9 @@ key = config['api_key']
 
 if len(key) <= 0:
 
-    print("Please, place your api key in the config.ini file")
-    exit
+    print("Please, place your api key in the config.ini file, exiting the program.....")
+    sys.exit()
+
 #collecting the data for top movies
 list_of_top_movies = get_top_movies(key)
 
